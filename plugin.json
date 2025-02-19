@@ -15,8 +15,8 @@
   "modules": [
     {
       "slug": "scanning_clock_multiplier_v2",
-      "name": "scanning clock multiplier v2",
-      "description": "create a scannable list of clock ratios",
+      "name": "Scanning Clock Multiplier",
+      "description": "Create a list of clock ratios, then scan through the list.",
       "tags": [
         "Clock generator",
         "Clock modulator",
@@ -25,17 +25,18 @@
     },
     {
       "slug": "phase_driven_multihit_envelope",
-      "name": "phase-driven multihit envelope",
-      "description": "derive up to sixteen hits from a 0-10 sawtooth or steady clock pulse",
+      "name": "Phase-Driven Multihit Envelope",
+      "description": "A clocked function generator that derives up to 16 envelopes from a clock cycle, with facilities to warp and skew the position of the envelopes.",
       "tags": [
         "Envelope generator",
-        "clock modulator"
+        "Function generator",
+        "Clock modulator"
       ]
     },
     {
       "slug": "scanning_frequency_division_osc_poly",
-      "name": "polyphonic scanning frequency division oscillator",
-      "description": "obtain organic transpositions and multiple harmonically related frequencies from a single v/oct",
+      "name": "Scanning Frequency Division Oscillator",
+      "description": "Polyphonic oscillator with thru-zero FM, windowed sync, and a unique scannable frequency-division parameter.",
       "tags": [
         "Oscillator",
         "Polyphonic"
@@ -44,10 +45,11 @@
     {
       "slug": "melody_transformer",
       "name": "Melody Transformer",
-      "description": "shape messy inputs into melodic outputs with selectable note priority",
+      "description": "Quantizer with user-defined master scale and sub-scales. Pre-quantization processing utilities include gain, offset, and a 16-step polyphonic looper",
       "tags": [
         "Quantizer",
-        "Utility"
+        "Utility",
+        "Polyphonic"
       ]
     }
   ]
