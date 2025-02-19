@@ -70,20 +70,20 @@ struct Melody_transformer : Module {
 		configSwitch(CEILING_MODE_PARAM, 0.f, 4.f, 4.f, "");
 		configParam(FLOOR_LEVEL_PARAM, -10.f, 10.f, -10.f, "");
 		configParam(CEILING_LEVEL_PARAM, -10.f, 10.f, 10.f, "");
-		configSwitch(TRANSPOSE_PARAM, -12.f, 12.f, 0.f, "transpose scale in semitones", {"-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
+		configSwitch(TRANSPOSE_PARAM, -12.f, 12.f, 0.f, "", {"-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
 		configSwitch(C_SHARP_PARAM, 0.f, 4.f, 0.f, "");
 		configSwitch(D_SHARP_PARAM, 0.f, 4.f, 0.f, "");
 		configSwitch(F_SHARP_PARAM, 0.f, 4.f, 0.f, "");
 		configSwitch(G_SHARP_PARAM, 0.f, 4.f, 0.f, "");
 		configSwitch(A_SHARP_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(C_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(D_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(E_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(F_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(G_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(A_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(B_PARAM, 0.f, 4.f, 0.f, "");
-		configSwitch(PRIO_SHIFT_PARAM, -12.f, 12.f, 0.f, "shift priorities of active notes", {"-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
+		configSwitch(C_PARAM, 0.f, 4.f, 4.f, "");
+		configSwitch(D_PARAM, 0.f, 4.f, 2.f, "");
+		configSwitch(E_PARAM, 0.f, 4.f, 3.f, "");
+		configSwitch(F_PARAM, 0.f, 4.f, 1.f, "");
+		configSwitch(G_PARAM, 0.f, 4.f, 3.f, "");
+		configSwitch(A_PARAM, 0.f, 4.f, 2.f, "");
+		configSwitch(B_PARAM, 0.f, 4.f, 1.f, "");
+		configSwitch(PRIO_SHIFT_PARAM, -12.f, 12.f, 0.f, "shift scale while staying in key", {"-12", "-11", "-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"});
 		configInput(INPUT_INPUT, "-10 to 10v, white noise normaled in");
 		configInput(GAIN_INPUT, "-10 to 10v, attenuverted by knob");
 		configInput(OFFSET_INPUT, "-10 to 10v, attenuverted by knob");
@@ -94,16 +94,13 @@ struct Melody_transformer : Module {
 		configInput(CEILING_MODE_INPUT, "0-5v, overrides knob");
 		configInput(FLOOR_LEVEL_INPUT, "-10 to 10v, overrides knob");
 		configInput(CEILING_LEVEL_INPUT, "-10 to 10v, overrides knob");
-		configInput(TRANSPOSE_INPUT, "-10 to 10v");
-		configInput(PRIO_SHIFT_INPUT, "-10 to 10v");
+		configInput(TRANSPOSE_INPUT, "accepts v/oct");
+		configInput(PRIO_SHIFT_INPUT, "accepts v/oct, ignoring notes outside of active scale");
 		configOutput(RAW_OUTPUT, "unquantized, but still processed and looped (if applicable)");
 		configOutput(PRIO_1_OUTPUT, "all active notes of the scale");
 		configOutput(PRIO_2_OUTPUT, "e.g. the root, 3rd, and 5th of the scale");
 		configOutput(PRIO_3_OUTPUT, "e.g. the root and 5th of the scale");
 		configOutput(PRIO_4_OUTPUT, "e.g. the root of the scale");
-		// configLight(S_AND_H_LIGHT, "");
-		// configLight(LOOP_LIGHT, "");
-		// configLight(OVERWRITE_LIGHT, "");
 	}
 
 	struct Note {
@@ -112,6 +109,7 @@ struct Melody_transformer : Module {
 		float prio = 0.f;
 	};
 	Note notes[12];
+	Note root;
 	float previousPrios[12] = {};
 	int transpose = 0;
 	int prevTranspose = 0;
@@ -127,21 +125,21 @@ struct Melody_transformer : Module {
 	float prio3Out = 0.f;
 	float prio4Out = 0.f;
 
-	dsp::SchmittTrigger sampleTrig;
-	dsp::SchmittTrigger loopTrig;
-	dsp::SchmittTrigger overwriteTrig;
-	float shiftReg[16] = {};
+	dsp::SchmittTrigger sampleTrig[16];
+	dsp::SchmittTrigger loopTrig[16];
+	dsp::SchmittTrigger overwriteTrig[16];
+	float shiftReg[16][16] = {};
 	int shift = 0;
-	float shiftOut = 0.f;
+	float shiftOut[16] = {};
 
-	float input = 0.f;
+	float input[16] = {};
 	float gain = 0.f;
-	float gainIn = 0.f;
+	float gainRaw[16] = {};
 	float offset = 0.f;
-	float offsetIn = 0.f;
-	float sampledInput = 0.f;
-	float processedInput = 0.f;
-	float raw = 0.f;
+	float offsetRaw[16] = {};
+	float sampledInput[16] = {};
+	float processedInput[16] = {};
+	float raw[16] = {};
 	float floor = 0.f;
 	int floorMode = 0;
 	float ceiling = 0.f;
@@ -262,135 +260,189 @@ struct Melody_transformer : Module {
 		getLight(OVERWRITE_LIGHT).setBrightness(getParam(OVERWRITE_PARAM).getValue() == 1.f? 1.0 : 0.0);
 
 		//set note values and prio
-		transpose = int(getInput(TRANSPOSE_INPUT).isConnected()? getInput(TRANSPOSE_INPUT).getVoltage()/10.*12. : getParam(TRANSPOSE_PARAM).getValue());
-		prioShift = int(getInput(PRIO_SHIFT_INPUT).isConnected()? getInput(PRIO_SHIFT_INPUT).getVoltage()/10.*12. : getParam(PRIO_SHIFT_PARAM).getValue());
+		transpose = int(getInput(TRANSPOSE_INPUT).isConnected()? round(getInput(TRANSPOSE_INPUT).getVoltage()*12.) : getParam(TRANSPOSE_PARAM).getValue()) % 12;
+		//setting prioShift to respond to v/oct is more complicated than transpose, because it should only respond to values in the active scale
+		int inputNote = round(getInput(PRIO_SHIFT_INPUT).isConnected()? getInput(PRIO_SHIFT_INPUT).getVoltage() * 12. : getParam(PRIO_SHIFT_PARAM).getValue());
+		inputNote = inputNote % 12;
+		if (inputNote < 0) inputNote += 12;
+		// Find the index of the input note in the active scale
+		std::vector<int> activeScale;
+		for (int i = 0; i < 12; i++) {
+			if (notes[i].prio > 0) {
+				activeScale.push_back(i);
+			}
+		}
+		// Find the first (lowest index) active note in the scale to use as reference
+		int referenceIndex = -1;
+		if (!activeScale.empty()) {
+			referenceIndex = 0; // The first note in the sorted activeScale is the "root"
+		}
+		// Find index of inputNote in activeScale
+		int newIndex = -1;
+		for (size_t i = 0; i < activeScale.size(); i++) {
+			if (activeScale[i] == inputNote) {
+				newIndex = i;
+				break;
+			}
+		}
+		// Ensure prioShift is updated only if inputNote is in activeScale and there's a valid reference
+		if (newIndex != -1 && referenceIndex != -1) {
+			prioShift = newIndex - referenceIndex;
+		}
+		for (int i=0; i<12; i++) {
+			if (notes[i].prio < 3.) {
+				root = notes[i];
+				break;
+			}
+		}
 		updateNotes(transpose, prioShift);
 
-		//process block
-		input = getInput(INPUT_INPUT).isConnected()? getInput(INPUT_INPUT).getVoltage() : std::rand() / float(RAND_MAX) * 20. - 10.;
-		gain = (getInput(GAIN_INPUT).isConnected()? getInput(GAIN_INPUT).getVoltage() / 10 * getParam(GAIN_PARAM).getValue() : getParam(GAIN_PARAM).getValue());
-		gainIn = input * gain;
-		offset = (getInput(OFFSET_INPUT).isConnected()? getInput(OFFSET_INPUT).getVoltage() : getParam(OFFSET_PARAM).getValue()); 
-		offsetIn = gainIn + offset;
-		dsp::SchmittTrigger::Event shTrig = sampleTrig.processEvent(getInput(S_AND_H_INPUT).getVoltage());
-		if (shTrig == 1) {
-			sampledInput = offsetIn;
-		}
-		bool sAndHOn = getParam(S_AND_H_PARAM).getValue() == 1.;
-		processedInput = sAndHOn? sampledInput : offsetIn;
+		//set channels based on input
+		int channels = std::max(1, getInput(INPUT_INPUT).getChannels());
 
-		//loop block
-		bool loopClock = getInput(CLOCK_INPUT).isConnected();
-		bool loopOn = getParam(LOOP_ON_PARAM).getValue() == 1.;
-		shift = clamp(shift, 0, 15);
-		dsp::SchmittTrigger::Event lTrig = loopTrig.processEvent(loopClock ? getInput(CLOCK_INPUT).getVoltage() : getInput(S_AND_H_INPUT).getVoltage());
-		float overwrite = (getInput(OVERWRITE_INPUT).isConnected()? getInput(OVERWRITE_INPUT).getVoltage() : getParam(OVERWRITE_PARAM).getValue());
-		if (lTrig == 1) {
-			if (!loopOn || overwrite >= 1.) {
-				shiftReg[shift] = processedInput;
-			} else {
-				shiftOut = shiftReg[shift];
+		for (int c = 0; c < channels; c++) {
+			input[c] = getInput(INPUT_INPUT).isConnected()? getInput(INPUT_INPUT).getPolyVoltage(c) : std::rand() / float(RAND_MAX) * 20. - 10.;
+			
+			dsp::SchmittTrigger::Event shTrig = sampleTrig[c].processEvent(getInput(S_AND_H_INPUT).getPolyVoltage(c));
+			if (shTrig == 1) {
+				sampledInput[c] = input[c];
 			}
-			shift++;  // Shift increments only once per clock event
-		}
-		int loopLength = std::floor(getParam(LOOP_LENGTH_PARAM).getValue() + 0.5);
-		if (shift >= loopLength) {
-			shift = 0;
-		}
-		raw = loopOn? shiftOut : processedInput;
+			bool sAndHOn = getParam(S_AND_H_PARAM).getValue() == 1.;
+			processedInput[c] = sAndHOn? sampledInput[c] : input[c];
 
-		//floor and ceiling blocks
-		floor = getInput(FLOOR_LEVEL_INPUT).isConnected() ? getInput(FLOOR_LEVEL_INPUT).getVoltage() : getParam(FLOOR_LEVEL_PARAM).getValue();
-		floor *= gain;
-		floor += offset;
-		floorMode = getInput(FLOOR_MODE_INPUT).isConnected() ? clamp(int(getInput(FLOOR_MODE_INPUT).getVoltage()), 0, 5) : int(getParam(FLOOR_MODE_PARAM).getValue());
-		ceiling = getInput(CEILING_LEVEL_INPUT).isConnected() ? getInput(CEILING_LEVEL_INPUT).getVoltage() : getParam(CEILING_LEVEL_PARAM).getValue();
-		ceiling *= gain;
-		ceiling += offset;
-		ceilingMode = getInput(CEILING_MODE_INPUT).isConnected() ? clamp(int(getInput(CEILING_MODE_INPUT).getVoltage()), 0, 5) : int(getParam(CEILING_MODE_PARAM).getValue());
-		if (raw < floor) {
-			switch (floorMode) {
-				case 0 :
-					raw = ceiling;
-					break;
-				case 1 :
-					while (raw < floor) {
-						raw++;
-					}
-					break;
-				case 2 :
-					raw += 2*(floor - raw);
-					break;
-				case 3 :
-					raw = floor;
-					break;
-				case 4 :
-					break;
+			//loop block
+			bool loopClock = getInput(CLOCK_INPUT).isConnected();
+			bool loopOn = getParam(LOOP_ON_PARAM).getValue() == 1.;
+			shift = clamp(shift, 0, 15);
+			dsp::SchmittTrigger::Event lTrig = loopTrig[c].processEvent(loopClock ? getInput(CLOCK_INPUT).getPolyVoltage(c) : getInput(S_AND_H_INPUT).getPolyVoltage(c));
+			float overwrite = (getInput(OVERWRITE_INPUT).isConnected()? getInput(OVERWRITE_INPUT).getPolyVoltage(c) : getParam(OVERWRITE_PARAM).getValue());
+			if (lTrig == 1) {
+				if (!loopOn || overwrite >= 1.) {
+					shiftReg[shift][c] = processedInput[c];
+				} else {
+					shiftOut[c] = shiftReg[shift][c];
+				}
+				shift++;  // Shift increments only once per clock event
 			}
-		}
-		if (raw > ceiling) {
-			switch (ceilingMode) {
-				case 0 :
-					raw = floor;
-					break;
-				case 1 :
-					while (raw > ceiling) {
-						raw--;
-					}
-					break;
-				case 2 :
-					raw -= 2*(raw - ceiling);
-					break;
-				case 3 :
-					raw = ceiling;
-					break;
-				case 4 :
-					break;
+			int loopLength = std::floor(getParam(LOOP_LENGTH_PARAM).getValue() + 0.5);
+			if (shift >= loopLength) {
+				shift = 0;
 			}
+			raw[c] = loopOn? shiftOut[c] : processedInput[c];
+			gain = (getInput(GAIN_INPUT).isConnected()? getInput(GAIN_INPUT).getVoltage() / 10 * getParam(GAIN_PARAM).getValue() : getParam(GAIN_PARAM).getValue());
+			gainRaw[c] = raw[c] * gain;
+			offset = (getInput(OFFSET_INPUT).isConnected()? getInput(OFFSET_INPUT).getVoltage() : getParam(OFFSET_PARAM).getValue()); 
+			offsetRaw[c] = gainRaw[c] + offset;
+
+			//floor and ceiling blocks
+			floor = getInput(FLOOR_LEVEL_INPUT).isConnected() ? getInput(FLOOR_LEVEL_INPUT).getVoltage() : getParam(FLOOR_LEVEL_PARAM).getValue();
+			floor *= gain;
+			floor += offset;
+			floorMode = getInput(FLOOR_MODE_INPUT).isConnected() ? clamp(int(getInput(FLOOR_MODE_INPUT).getVoltage()), 0, 5) : int(getParam(FLOOR_MODE_PARAM).getValue());
+			ceiling = getInput(CEILING_LEVEL_INPUT).isConnected() ? getInput(CEILING_LEVEL_INPUT).getVoltage() : getParam(CEILING_LEVEL_PARAM).getValue();
+			ceiling *= gain;
+			ceiling += offset;
+			ceilingMode = getInput(CEILING_MODE_INPUT).isConnected() ? clamp(int(getInput(CEILING_MODE_INPUT).getVoltage()), 0, 5) : int(getParam(CEILING_MODE_PARAM).getValue());
+			if (offsetRaw[c] < floor) {
+				switch (floorMode) {
+					case 0 :
+					offsetRaw[c] = ceiling;
+						break;
+					case 1 :
+						while (offsetRaw[c] < floor) {
+							offsetRaw[c]++;
+						}
+						break;
+					case 2 :
+						offsetRaw[c] += 2*(floor - offsetRaw[c]);
+						break;
+					case 3 :
+						offsetRaw[c] = floor;
+						break;
+					case 4 :
+						break;
+				}
+
+			}
+			if (offsetRaw[c] > ceiling) {
+				switch (ceilingMode) {
+					case 0 :
+						offsetRaw[c] = trunc(floor) + root.value;
+						break;
+					case 1 :
+						while (offsetRaw[c] > ceiling) {
+							offsetRaw[c]--;
+						}
+						break;
+					case 2 :
+						offsetRaw[c] -= 2*(offsetRaw[c] - ceiling);
+						break;
+					case 3 :
+						offsetRaw[c] = ceiling;
+						break;
+					case 4 :
+						break;
+				}
+			}
+
+			//quantize block
+			prio1Out = getQuantizedValue(offsetRaw[c], prio1s);
+			prio2Out = getQuantizedValue(offsetRaw[c], prio2s);
+			prio3Out = getQuantizedValue(offsetRaw[c], prio3s);
+			prio4Out = getQuantizedValue(offsetRaw[c], prio4s);
+
+
+			getOutput(PRIO_1_OUTPUT).setVoltage(prio1Out, c);
+			getOutput(PRIO_2_OUTPUT).setVoltage(prio2Out, c);
+			getOutput(PRIO_3_OUTPUT).setVoltage(prio3Out, c);
+			getOutput(PRIO_4_OUTPUT).setVoltage(prio4Out, c);
+			getOutput(RAW_OUTPUT).setVoltage(offsetRaw[c], c);
 		}
-
-		//quantize block
-		prio1Out = getQuantizedValue(raw, prio1s);
-		prio2Out = getQuantizedValue(raw, prio2s);
-		prio3Out = getQuantizedValue(raw, prio3s);
-		prio4Out = getQuantizedValue(raw, prio4s);
-
-
-		getOutput(PRIO_1_OUTPUT).setVoltage(prio1Out);
-		getOutput(PRIO_2_OUTPUT).setVoltage(prio2Out);
-		getOutput(PRIO_3_OUTPUT).setVoltage(prio3Out);
-		getOutput(PRIO_4_OUTPUT).setVoltage(prio4Out);
-		getOutput(RAW_OUTPUT).setVoltage(raw);
+		getOutput(PRIO_1_OUTPUT).setChannels(channels);
+		getOutput(PRIO_2_OUTPUT).setChannels(channels);
+		getOutput(PRIO_3_OUTPUT).setChannels(channels);
+		getOutput(PRIO_4_OUTPUT).setChannels(channels);
+		getOutput(RAW_OUTPUT).setChannels(channels);
 	}
 
 	json_t* dataToJson() override {
-        json_t* rootJ = json_object();
-
-        // Save the activeRatios vector to JSON
-        json_t* shiftRegJ = json_array();
-        for (float note : shiftReg) {
-            json_array_append_new(shiftRegJ, json_real(note));
-        }
-        json_object_set_new(rootJ, "shiftReg", shiftRegJ);
-
-        return rootJ;
-
-    }
-    void dataFromJson(json_t* rootJ) override {
+		json_t* rootJ = json_object();
+	
+		// Save shiftReg as a nested JSON array
+		json_t* shiftRegJ = json_array();
+		for (int i = 0; i < 16; i++) {
+			json_t* rowJ = json_array();
+			for (int j = 0; j < 16; j++) {
+				json_array_append_new(rowJ, json_real(shiftReg[i][j]));
+			}
+			json_array_append_new(shiftRegJ, rowJ);
+		}
+		json_object_set_new(rootJ, "shiftReg", shiftRegJ);
+	
+		return rootJ;
+	}
+	
+	void dataFromJson(json_t* rootJ) override {
 		json_t* shiftRegJ = json_object_get(rootJ, "shiftReg");
 		if (shiftRegJ && json_is_array(shiftRegJ)) {
-			size_t index;
-			json_t* value;
-			size_t count = json_array_size(shiftRegJ);
+			size_t rowCount = json_array_size(shiftRegJ);
 			
-			for (index = 0; index < count && index < 16; index++) { // Ensure we don't exceed the array size
-				value = json_array_get(shiftRegJ, index);
-				if (json_is_number(value)) {
-					shiftReg[index] = (float)json_real_value(value);
+			for (size_t i = 0; i < rowCount && i < 16; i++) { // Limit to 16 rows
+				json_t* rowJ = json_array_get(shiftRegJ, i);
+				if (rowJ && json_is_array(rowJ)) {
+					size_t colCount = json_array_size(rowJ);
+					
+					for (size_t j = 0; j < colCount && j < 16; j++) { // Limit to 16 columns
+						json_t* value = json_array_get(rowJ, j);
+						if (json_is_number(value)) {
+							shiftReg[i][j] = (float)json_real_value(value);
+						}
+					}
 				}
 			}
 		}
 	}
+	
 	
 };
 
@@ -470,7 +522,7 @@ struct CeilingModeText : Widget {
 			nvgTextAlign(args.vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
 			switch (mode) {
 				case 0:
-					text = string::f("to floor");
+					text = string::f("to root");
 					break;
 				case 1:
 					text = string::f("down oct");
@@ -507,27 +559,36 @@ struct NoteShiftIndicator : Widget {
 		switch (int(note->prio)) {
 			case 0:
 				nvgFillColor(args.vg, nvgRGBf(0., 0., 0.));
+				nvgStrokeColor(args.vg, nvgRGBf(1., 1., 1.));
 				break;
 			case 1:
 				nvgFillColor(args.vg, nvgRGBf(0.33, 0.33, 0.33));
+				nvgStrokeColor(args.vg, nvgRGBf(0.66, 0.66, 0.66));
+
 				break;
 			case 2:
 				nvgFillColor(args.vg, nvgRGBf(0.5, 0.5, 0.5));
 				break;
 			case 3:
 				nvgFillColor(args.vg, nvgRGBf(0.66, 0.66, 0.66));
+				nvgStrokeColor(args.vg, nvgRGBf(0.33, 0.33, 0.33));
 				break;
 			case 4:
 				nvgFillColor(args.vg, nvgRGBf(1., 1., 1.));
+				nvgStrokeColor(args.vg, nvgRGBf(0., 0., 0.));
 				break;
 			default:
 				nvgFillColor(args.vg, nvgRGBf(0., 0., 0.));
+				nvgStrokeColor(args.vg, nvgRGBf(1., 1., 1.));
 				break;
 		}
 
 		nvgBeginPath(args.vg);
 		nvgCircle(args.vg, 0, 0, 5.);
 		nvgFill(args.vg);
+		nvgStrokeWidth(args.vg, 0.3);
+		nvgStroke(args.vg);
+
 	}
 };
 
