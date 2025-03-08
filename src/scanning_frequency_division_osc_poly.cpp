@@ -52,7 +52,7 @@ struct Scanning_frequency_division_osc_poly : Module {
 
 	Scanning_frequency_division_osc_poly() {
 		config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
-		configParam(FREQ_PARAM, -4.f, 6.f, 0.f, "");
+		configParam(FREQ_PARAM, -5.f, 5.f, 0.f, "");
 		configParam(SCAN_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(WAVE_SHAPE_PARAM, 0.f, 1.f, 0.f, "");
 		configParam(FM_DEPTH_PARAM, -2.f, 2.f, 0.f, "");
@@ -93,13 +93,14 @@ struct Scanning_frequency_division_osc_poly : Module {
 	std::vector<int> activeRatios;
 	dsp::PulseGenerator scanPulse;
 	dsp::SchmittTrigger scanTrigger;
-	dsp::SchmittTrigger syncCheck;
-	dsp::PulseGenerator syncPulse;
+	
     int allDivisors[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     
 	float waveBlend = 0.f;
     
     struct Engine {
+		dsp::SchmittTrigger syncCheck[4];
+		dsp::PulseGenerator syncPulse[4];
 		int32_4 currentScan = {0, 0, 0, 0};
     	int32_4 previousScan = {0, 0, 0, 0};
 		float_4 scanValue = {0.f, 0.f, 0.f, 0.f};
@@ -219,9 +220,8 @@ struct Scanning_frequency_division_osc_poly : Module {
 	
 		
 
-	float_4 waveReturn(const float& waveBlend, float_4 phase) {
+	float_4 waveReturn(const float& waveBlend, float_4 phase, float_4 syncWindow) {
     	// compute common values that don’t depend on waveBlend
-		float syncWindow = 4*pow((getInput(SYNC_INPUT).getVoltage()/10), 2);
     	float windowDepth = getParam(SYNC_WINDOW_PARAM).getValue();
     	float window = 1.f - (getInput(SYNC_INPUT).getVoltage() / 5.f) * windowDepth;
 		float_4 wave;
@@ -262,7 +262,6 @@ struct Scanning_frequency_division_osc_poly : Module {
 
 		waveBlend = getInput(WAVE_SHAPE_INPUT).isConnected()? clamp(((getInput(WAVE_SHAPE_INPUT).getVoltage()/10.f) + getParam(WAVE_SHAPE_PARAM).getValue())) : getParam(WAVE_SHAPE_PARAM).getValue();
 		
-        dsp::SchmittTrigger::Event syncTrigger = syncCheck.processEvent(getInput(SYNC_INPUT).getVoltage());
         if (getParam(WINDOWING_ON_PARAM).getValue() == 1.f) {
             getLight(WINDOWING_ON_LIGHT).setBrightness(1.f);
         } else {
@@ -272,12 +271,16 @@ struct Scanning_frequency_division_osc_poly : Module {
 		int channels = std::max(1, getInput(VOCT_INPUT).getChannels());
 		for (int c = 0; c < channels; c+=4) {
 			Engine& engine = engines[c / 4];
+			dsp::SchmittTrigger::Event syncTrigger[4];
 			//setting scan value and pitch across engine
 			engine.scanValue = getParam(SCAN_PARAM).getValue();
 			float_4 currentSampleTime = args.sampleTime;
 			float_4 pitch;
+			float_4 polySyncWindow;
 
 			for (int i=0; i<4; i++) {
+				polySyncWindow[i] = 4*pow((getInput(SYNC_INPUT).getPolyVoltage(c+i)/10), 2);
+				syncTrigger[i] =  engine.syncCheck[c+i].processEvent(getInput(SYNC_INPUT).getPolyVoltage(c+i));
 				pitch[i] = getParam(FREQ_PARAM).getValue() + getInput(VOCT_INPUT).getPolyVoltage(c+i);
 				engine.scanValue[i] += getInput(SCAN_CV_INPUT).getPolyVoltage(c+i)/10.f;
 				engine.fMod[i] = getInput(FM_DEPTH_INPUT).isConnected()? (getInput(FM_DEPTH_INPUT).getPolyVoltage(c+i)/10) * getParam(FM_DEPTH_PARAM).getValue() * getInput(FM_INPUT).getPolyVoltage(c+i) : getParam(FM_DEPTH_PARAM).getValue() * getInput(FM_INPUT).getPolyVoltage(c+i);
@@ -299,10 +302,6 @@ struct Scanning_frequency_division_osc_poly : Module {
 					scanPulse.trigger();
 				}
 			}
-			
-			if (syncTrigger == 1) {
-				engine.phase = 0.f;
-			}
 
 			simd::float_4 scanFreq = (freq / engine.currentScan) * currentSampleTime;
 			engine.scanFreq = scanFreq;
@@ -320,16 +319,19 @@ struct Scanning_frequency_division_osc_poly : Module {
 			engine.lowPhase += lowFreq;
 			engine.lowPhase -= simd::trunc(engine.lowPhase);
 
-			if (syncTrigger == 1) {
-				engine.scanPhase = 0.f;
-				engine.reflectedScanPhase = 0.f;
-				engine.lowPhase = 0.f;
+			for (int i=0; i<4; i++) {
+				if (syncTrigger[i] == 1) {
+					engine.phase[c+i] = 0.f;
+					engine.scanPhase[c+i] = 0.f;
+					engine.reflectedScanPhase[c+i] = 0.f;
+					engine.lowPhase[c+i] = 0.f;
+				}
 			}
 
-			getOutput(FREQ_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.phase), c);
-			getOutput(SCAN_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.scanPhase), c);
-			getOutput(REFL_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.reflectedScanPhase), c);
-			getOutput(LOW_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.lowPhase), c);
+			getOutput(FREQ_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.phase, polySyncWindow), c);
+			getOutput(SCAN_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.scanPhase, polySyncWindow), c);
+			getOutput(REFL_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.reflectedScanPhase, polySyncWindow), c);
+			getOutput(LOW_OUTPUT).setVoltageSimd(5.f * waveReturn(waveBlend, engine.lowPhase, polySyncWindow), c);
 		}
         getOutput(FREQ_OUTPUT).setChannels(channels);
         getOutput(SCAN_OUTPUT).setChannels(channels);
