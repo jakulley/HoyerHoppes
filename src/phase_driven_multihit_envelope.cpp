@@ -82,6 +82,7 @@ struct Phase_driven_multihit_envelope : Module {
 	float rate = 0.f;
 	//phase variables
 	float phase = 0.f;
+	float phaseOffset = 0.f;
 	float skewValue = 0.f;
 	float skewPhase = 0.f;
 	float spreadValue = 0.f;
@@ -122,7 +123,7 @@ struct Phase_driven_multihit_envelope : Module {
 		getLight(DECAY_LIGHT).setBrightness(1.0);
 		//set phase
 		if (getParam(PHASE_MODE_PARAM).getValue() == 1.) {
-			phase = getInput(RATE_INPUT).getVoltage()/10;
+			phase = clamp(getInput(RATE_INPUT).getVoltage()/10 + phaseOffset);
 		} else if(rateTrigger.process(getInput(RATE_INPUT).getVoltage())) {
 			currentTime = args.frame;
 			period = currentTime - lastTrigTime;
@@ -388,28 +389,36 @@ struct Phase_driven_multihit_envelopeWidget : ModuleWidget {
 		assert(module);
 	
 		menu->addChild(new MenuSeparator());
-	
-		menu->addChild(new MenuSeparator());
 		menu->addChild(createMenuLabel("Hit Count"));
-			menu->addChild(createMenuItem("", "1-16",
+			menu->addChild(createMenuItem("1-16", "default",
 			[=]()	{
 				module->configSwitch(module->HITS_PARAM, 1.f, 16.f, 1.f, "number of hits", {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"});
 				module->hitPattern=0;
 			}));
-			menu->addChild(createMenuItem("", "1 and powers of two",
+			menu->addChild(createMenuItem("1 and powers of two", "",
 				[=]()	{
 					module->configSwitch(module->HITS_PARAM, 1.f, 5.f, 1.f, "number of hits", {"1", "2", "4", "8", "16"});
 					module->hitPattern=1;
 				}));
-			menu->addChild(createMenuItem("", "evens",
+			menu->addChild(createMenuItem("evens", "",
 				[=]()	{
 					module->configSwitch(module->HITS_PARAM, 1.f, 7.f, 1.f, "number of hits", {"2", "4", "6", "8", "10", "12", "16"});
 					module->hitPattern=2;
 				}));
-			menu->addChild(createMenuItem("", "odds",
+			menu->addChild(createMenuItem("multiples of 3", "", 
 				[=]()	{
 					module->configSwitch(module->HITS_PARAM, 1.f, 5.f, 1.f, "number of hits", {"3", "6", "9", "12", "15"});
 					module->hitPattern=3;
+				}));
+		menu->addChild(createMenuLabel("rate input range"));
+			menu->addChild(createMenuItem("unipolar (0-10v)", "default",
+				[=]()	{
+					//default mode
+					module->phaseOffset = 0.f;
+				}));
+			menu->addChild(createMenuItem("bipolar(-5-5v)", "",
+				[=]()	{
+					module->phaseOffset = 0.5f;
 				}));
 	}
 
