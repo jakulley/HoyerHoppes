@@ -37,57 +37,57 @@ struct RoundExtraBigBlackKnob : RoundKnob {
 struct By1Button : app::SvgSwitch {
 	By1Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By1off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By1on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By1Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By1On.svg")));
 	}
 };
 struct By2Button : app::SvgSwitch {
 	By2Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By2off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By2on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By2Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By2On.svg")));
 	}
 };
 struct By3Button : app::SvgSwitch {
 	By3Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By3off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By3on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By3Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By3On.svg")));
 	}
 };
 struct By4Button : app::SvgSwitch {
 	By4Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By4off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By4on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By4Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By4On.svg")));
 	}
 };
 struct By5Button : app::SvgSwitch {
 	By5Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By5off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By5on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By5Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By5On.svg")));
 	}
 };
 struct By6Button : app::SvgSwitch {
 	By6Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By6off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By6on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By6Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By6On.svg")));
 	}
 };
 struct By7Button : app::SvgSwitch {
 	By7Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By7off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By7on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By7Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By7On.svg")));
 	}
 };
 struct By8Button : app::SvgSwitch {
 	By8Button() {
 		momentary = false;
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By8off.svg")));
-		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By8on.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By8Off.svg")));
+		addFrame(Svg::load(asset::plugin(pluginInstance, "res/ComponentLibrary/By8On.svg")));
 	}
 };
 
