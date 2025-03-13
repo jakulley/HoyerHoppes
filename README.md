@@ -4,7 +4,7 @@ Included modules:
 
 -> Scanning Clock Multiplier v2
 
--> Scanning Frequency Division Oscillator
+-> Scanning Frequency Division Oscillator - [Video demo](https://youtu.be/7maf4w7-b0o)
 
 -> Phase-Driven Multihit Envelope
 
